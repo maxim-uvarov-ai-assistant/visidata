@@ -8,7 +8,24 @@ import os
 
 import visidata
 from visidata import VisiData, BaseSheet, vd, AttrDict
-from visidata.vendor.appdirs import user_config_dir, user_cache_dir
+from visidata.vendor.appdirs import user_config_dir as _appdirs_config_dir
+from visidata.vendor.appdirs import user_cache_dir as _appdirs_cache_dir
+
+
+def _xdg_config_dir(appname):
+    'Return XDG_CONFIG_HOME/appname if set, else platform-specific config dir.'
+    xdg_config_home = os.getenv('XDG_CONFIG_HOME', '')
+    if xdg_config_home:
+        return os.path.join(xdg_config_home, appname)
+    return _appdirs_config_dir(appname)
+
+
+def _xdg_cache_dir(appname):
+    'Return XDG_CACHE_HOME/appname if set, else platform-specific cache dir.'
+    xdg_cache_home = os.getenv('XDG_CACHE_HOME', '')
+    if xdg_cache_home:
+        return os.path.join(xdg_cache_home, appname)
+    return _appdirs_cache_dir(appname)
 
 
 # [settingname] -> { objname(Sheet-instance/Sheet-type/'global'/'default'): Option/Command/longname }
@@ -435,15 +452,16 @@ def addOptions(parser):
 
 
 def _get_config_file():
-    xdg_config_file = visidata.Path(user_config_dir('visidata')) / 'config.py'
-    if xdg_config_file.exists():
-        return xdg_config_file
-    else:
-        return visidata.Path('~/.visidatarc')
+    'Return config file path: XDG/platform config.py if exists, else ~/.visidatarc.'
+    config_file = visidata.Path(_xdg_config_dir('visidata')) / 'config.py'
+    if config_file.exists():
+        return config_file
+    return visidata.Path('~/.visidatarc')
 
 
 def _get_cache_dir():
-    return visidata.Path(user_cache_dir('visidata'))
+    'Return cache directory path, respecting XDG_CACHE_HOME on all platforms.'
+    return visidata.Path(_xdg_cache_dir('visidata'))
 
 
 @VisiData.api
@@ -566,7 +584,7 @@ def setPersistentOptions(vd, **kwargs):
                 fp.write(f'options.{optname}={repr(optval)}\n')
 
 
-vd.option('visidata_dir', user_config_dir('visidata'), 'directory to load and store additional files', sheettype=None)
+vd.option('visidata_dir', _xdg_config_dir('visidata'), 'directory to load and store additional files', sheettype=None)
 
 BaseSheet.bindkey('^M', '^J')  # for windows ENTER
 
